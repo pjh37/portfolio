@@ -11,6 +11,8 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import java.util.regex.Pattern;
+
+import com.example.myfriends.managerPackage.NetworkManager;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
@@ -30,6 +32,8 @@ public class registerActivity extends AppCompatActivity implements View.OnClickL
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
+        Intent intent=getIntent();
+
         firebaseAuth=FirebaseAuth.getInstance();
         editEmail=(EditText)findViewById(R.id.txtEmail);
         editPassword=(EditText)findViewById(R.id.txtPw);
@@ -38,6 +42,9 @@ public class registerActivity extends AppCompatActivity implements View.OnClickL
         cancelBtn=(Button)findViewById(R.id.cancelBtn);
         registerBtn.setOnClickListener(this);
         cancelBtn.setOnClickListener(this);
+        if(!intent.getStringExtra("email").equals("")){
+            editEmail.setText(intent.getStringExtra("email"));
+        }
     }
     @Override
     public void onClick(View v) {
@@ -86,14 +93,22 @@ public class registerActivity extends AppCompatActivity implements View.OnClickL
                         if (task.isSuccessful()) {
                             // 회원가입 성공
 
+                            NetworkManager.getInstance().join(editEmail.getText().toString(),
+                                    editPassword.getText().toString(),
+                                    editNicName.getText().toString());
+
+
+                            /*
                             Intent joinIntent =new Intent("com.example.JOIN_ACTION");
                             joinIntent.putExtra("email",editEmail.getText().toString());
                             joinIntent.putExtra("password",editPassword.getText().toString());
                             joinIntent.putExtra("nicName",editNicName.getText().toString());
                             sendBroadcast(joinIntent);
+                            */
                             Toast.makeText(getApplicationContext(), "회원가입 성공", Toast.LENGTH_SHORT).show();
-                            Intent intent=new Intent(getApplicationContext(),MainActivity.class);
+                            Intent intent=new Intent(getApplicationContext(),LoginActivity.class);
                             startActivity(intent);
+                            finish();
                         } else {
                             // 회원가입 실패
                             Toast.makeText(getApplicationContext(), "회원가입 실패", Toast.LENGTH_SHORT).show();

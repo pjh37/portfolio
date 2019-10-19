@@ -1,12 +1,15 @@
 package com.example.myfriends;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,7 +20,10 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.example.myfriends.chatRoomList.ChatRoomListItemVO;
+import com.example.myfriends.dbHelperPackage.ProfileDBHelper;
 import com.example.myfriends.friendsList.FriendsListItemVO;
+import com.example.myfriends.managerPackage.NetworkManager;
+import com.example.myfriends.servicePackage.ChatService;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -39,13 +45,15 @@ import com.nhn.android.naverlogin.ui.view.OAuthLoginButton;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 
 
 public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
-    public static ArrayList<FriendsListItemVO> friendsListItemVOS;
-    public static ArrayList<ChatRoomListItemVO> chatRoomListItemVOS;
+    public ArrayList<FriendsListItemVO> friendsListItemVOS;
+    public ArrayList<ChatRoomListItemVO> chatRoomListItemVOS;
+    public HashMap<String,Integer> chatRoomListHash;
     public static OAuthLogin mOAuthLoginModule;
     OAuthLoginButton mOAuthLoginButton;
     public String userEmail;
@@ -53,11 +61,14 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     public String userId;
     public boolean isChatRoomListReceived;
     public boolean isFriendsListReceived;
+    boolean fileReadPermission;
+    boolean fileWritePermission;
+    boolean cameraPermission;
     private Button loginBtn;
     private Button registerBtn;
     private EditText editEmail;
     private EditText editPassword;
-
+    private ProfileDBHelper profileDBHelper;
     // 비밀번호 정규식
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^[a-zA-Z0-9!@.#$%^&*?_~]{4,16}$");
     //파이어베이스 인증 객체
@@ -70,14 +81,25 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        permissionCheck();
+        profileDBHelper=new ProfileDBHelper(this);
+
         //친구목록과 채팅방목록 디비에서 받기
         registerReceiver(friendsList,new IntentFilter("com.example.FRIENDS_LIST_RECEIVE_ACTION"));
         registerReceiver(chatRoomList,new IntentFilter("com.example.CHAT_ROOM_LIST_RECEIVE_ACTION"));
         registerReceiver(loginComplete,new IntentFilter("com.example.LOGIN_COMPLETE_ACTION"));
         registerReceiver(gotoMainActivity,new IntentFilter("com.example.ALL_COMPLETE_ACTION"));
         //채팅 service 시작'
-        Intent intent=new Intent(this,ChatService.class);
+        Intent intent=new Intent(this, ChatService.class);
         startService(intent);
+        /*
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
+            startForegroundService(intent);
+        }else{
+            startService(intent);
+        }
+        */
+
         firebaseAuth=FirebaseAuth.getInstance();
         loginBtn =(Button)findViewById(R.id.loginBtn);
         registerBtn=(Button)findViewById(R.id.registerBtn);
@@ -85,6 +107,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         registerBtn.setOnClickListener(this);
         editEmail=(EditText)findViewById(R.id.txtId);
         editPassword=(EditText)findViewById(R.id.txtPw);
+        chatRoomListHash=new HashMap<>();
         userEmail="";
         isChatRoomListReceived=false;
         isFriendsListReceived=false;
@@ -139,16 +162,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                             userEmail=user.getEmail();
                             Log.v(TAG, user.getEmail());
                             Log.v(TAG, user.getUid());
-                            Intent bintent =new Intent("com.example.FRIENDS_LIST_ACTION");
-                            bintent.putExtra("email",user.getEmail());
-                            sendBroadcast(bintent);
-                            /*
-                            Intent login_intent =new Intent("com.example.LOGIN_ACTION");
-                            login_intent.putExtra("email",user.getEmail());
-                            sendBroadcast(login_intent);
-                            */
+                            NetworkManager.getInstance().login(userEmail);
                             Log.v(TAG, "Google sign in success");
-
                         } else {
                             Toast.makeText(getApplicationContext(), "인증 실패", Toast.LENGTH_SHORT).show();
                         }
@@ -199,20 +214,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                             // 로그인 성공
                             userEmail=email;
                             Toast.makeText(getApplicationContext(), "로그인 성공", Toast.LENGTH_SHORT).show();
-
-                            Intent login_intent =new Intent("com.example.LOGIN_REQUEST_ACTION");
-                            login_intent.putExtra("email",userEmail);
-                            sendBroadcast(login_intent);
-
-                            /*
-                            Intent bintent =new Intent("com.example.FRIENDS_LIST_ACTION");
-                            bintent.putExtra("email",email);
-                            sendBroadcast(bintent);
-                            */
-                            /*
-                            Intent intent=new Intent(getApplicationContext(),MainActivity.class);
-                            startActivity(intent);
-                            */
+                            NetworkManager.getInstance().login(userEmail);
                         } else {
                             // 로그인 실패
                             Toast.makeText(getApplicationContext(), "로그인 실패", Toast.LENGTH_SHORT).show();
@@ -227,6 +229,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         }
         else if(v==registerBtn){
             Intent intent=new Intent(getApplicationContext(),registerActivity.class);
+            intent.putExtra("email","");
             startActivity(intent);
         }else if(v==google_login_btn){
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
@@ -243,14 +246,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                 long expiresAt = mOAuthLoginModule.getExpiresAt(getApplicationContext());
                 String tokenType = mOAuthLoginModule.getTokenType(getApplicationContext());
                 new RequestApi().execute();
-                /*
-                Intent bintent =new Intent("com.example.FRIENDS_LIST_ACTION");
-                sendBroadcast(bintent);
-                */
-                /*
-                Intent intent=new Intent(getApplicationContext(),MainActivity.class);
-                startActivity(intent);
-                */
             } else {
                 String errorCode = mOAuthLoginModule.getLastErrorCode(getApplicationContext()).getCode();
                 String errorDesc = mOAuthLoginModule.getLastErrorDesc(getApplicationContext());
@@ -276,9 +271,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                 JSONObject response = jsonObject.getJSONObject("response");
                 userEmail = response.getString("email");
                 Log.v("onPostExecute",response.getString("email"));
-                Intent login_intent =new Intent("com.example.LOGIN_REQUEST_ACTION");
-                login_intent.putExtra("email",userEmail);
-                sendBroadcast(login_intent);
+                NetworkManager.getInstance().login(userEmail);
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -292,18 +285,25 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     BroadcastReceiver friendsList=new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.v("loginActivity","friendsList");
             friendsListItemVOS=intent.getParcelableArrayListExtra("data");
             isFriendsListReceived=true;
             Intent friendsList_intent=new Intent("com.example.ALL_COMPLETE_ACTION");
             sendBroadcast(friendsList_intent);
             //setFragment(0);
-            Log.v("argumentCount",friendsListItemVOS.get(0).getStateMessage());
+            //Log.v("argumentCount",friendsListItemVOS.get(0).getStateMessage());
         }
     };
     BroadcastReceiver chatRoomList=new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.v("loginActivity","chatRoomList");
             chatRoomListItemVOS=intent.getParcelableArrayListExtra("data");
+
+           for(int i=0;i<chatRoomListItemVOS.size();i++){
+               chatRoomListHash.put((String)chatRoomListItemVOS.get(i).getChatRoomId(),i);
+           }
+
             isChatRoomListReceived=true;
             Intent chatRoomList_intent=new Intent("com.example.ALL_COMPLETE_ACTION");
             sendBroadcast(chatRoomList_intent);
@@ -312,10 +312,15 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     BroadcastReceiver gotoMainActivity=new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.v("loginActivity","gotoMainActivity");
             if(isChatRoomListReceived&&isFriendsListReceived) {
+                isChatRoomListReceived=false;
+                isFriendsListReceived=false;
+                profileDBHelper.initProfile(nicName);
                 Intent mainintent = new Intent(getApplicationContext(), MainActivity.class);
                 mainintent.putParcelableArrayListExtra("friendsListData", friendsListItemVOS);
                 mainintent.putParcelableArrayListExtra("chatRoomListData", chatRoomListItemVOS);
+                mainintent.putExtra("chatRooms",chatRoomListHash);
                 mainintent.putExtra("userEmail", userEmail);
                 mainintent.putExtra("nicName",nicName);
                 startActivity(mainintent);
@@ -325,23 +330,68 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     BroadcastReceiver loginComplete=new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            nicName=intent.getStringExtra("nicName");
-            Intent bintent =new Intent("com.example.FRIENDS_LIST_ACTION");
-            bintent.putExtra("email",userEmail);
-            sendBroadcast(bintent);
-            Intent chatRoom_intent=new Intent("com.example.CHAT_ROOM_LIST_ACTION");
-            chatRoom_intent.putExtra("email",userEmail);
-            sendBroadcast(chatRoom_intent);
+            if(intent.getStringExtra("type").equals("joined")){
+                nicName=intent.getStringExtra("nicName");
+                NetworkManager.getInstance().friendsList(userEmail);
+                NetworkManager.getInstance().chatRoomList(userEmail,nicName);
+            }else{
+                Intent register_intent=new Intent(getApplicationContext(),registerActivity.class);
+                register_intent.putExtra("email",userEmail);
+                startActivity(register_intent);
+            }
         }
     };
+    public void permissionCheck(){
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)== PackageManager.PERMISSION_GRANTED){
+            fileReadPermission=true;
+        }
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)==PackageManager.PERMISSION_GRANTED){
+            fileWritePermission=true;
+        }
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)== PackageManager.PERMISSION_GRANTED){
+            cameraPermission=true;
+        }
+        if(!fileReadPermission||!fileWritePermission||!cameraPermission){
+            ActivityCompat.requestPermissions(this,new String[]{
+                    Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.CAMERA},200);
+        }
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode,String[]permissions,int[] grantResults){
+        super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        if(requestCode==200&&grantResults.length>0){
+            if(grantResults[0]==PackageManager.PERMISSION_GRANTED){
+                fileReadPermission=true;
+            }
+            if(grantResults[1]==PackageManager.PERMISSION_GRANTED){
+                fileWritePermission=true;
+            }
+            if(grantResults[2]==PackageManager.PERMISSION_GRANTED){
+                cameraPermission=true;
+            }
+        }
+    }
     @Override
     public void onDestroy() {
         super.onDestroy();
         mOAuthLoginModule.logoutAndDeleteToken(getApplicationContext());
+        friendsListItemVOS=null;
+        chatRoomListItemVOS=null;
+        chatRoomListHash=null;
+        userEmail=null;
+        nicName=null;
+        userId=null;
+        loginBtn=null;
+        registerBtn=null;
+        editEmail=null;
+        editPassword=null;
+        System.gc();
         unregisterReceiver(friendsList);
         unregisterReceiver(chatRoomList);
         unregisterReceiver(loginComplete);
         unregisterReceiver(gotoMainActivity);
+        Log.v("AppStatus","LoginActivity onDestroy call");
+        finish();
         //mOAuthLoginModule.logout(getApplicationContext());
     }
 }

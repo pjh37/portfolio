@@ -6,17 +6,26 @@ import android.os.Parcelable;
 
 import com.example.myfriends.friendsList.FriendsListItemVO;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 public class ChatRoomListItemVO implements Parcelable {
     private String chatRoomId;
     private Bitmap profilImage;
-    private String name;
+    private List<String> names;
     private String lastReceivedMessage;
     private String peopleCount;
     private String date;
-    public ChatRoomListItemVO(){}
+    public ChatRoomListItemVO(){
+        this.lastReceivedMessage="";
+        this.peopleCount="0";
+        this.date=getTime();
+    }
     public ChatRoomListItemVO(Parcel src){
         this.chatRoomId=src.readString();
-        this.name=src.readString();
+        names=src.createStringArrayList();
         this.lastReceivedMessage=src.readString();
         this.peopleCount=src.readString();
         this.date=src.readString();
@@ -53,12 +62,12 @@ public class ChatRoomListItemVO implements Parcelable {
         this.profilImage = profilImage;
     }
 
-    public String getName() {
-        return name;
+    public List<String> getNames() {
+        return names;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setNames(List<String> names) {
+        this.names = names;
     }
 
     public String getLastReceivedMessage() {
@@ -88,9 +97,15 @@ public class ChatRoomListItemVO implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(chatRoomId);
-        dest.writeString(name);
+        dest.writeStringList(names);
         dest.writeString(lastReceivedMessage);
         dest.writeString(peopleCount);
         dest.writeString(date);
+    }
+    public String getTime(){
+        SimpleDateFormat sdf=new SimpleDateFormat("MM월dd일");
+        long now=System.currentTimeMillis();
+        Date date=new Date(now);
+        return sdf.format(date);
     }
 }

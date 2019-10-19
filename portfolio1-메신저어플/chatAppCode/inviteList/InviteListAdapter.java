@@ -1,6 +1,7 @@
 package com.example.myfriends.inviteList;
 
 import android.content.Context;
+import android.net.Uri;
 import android.support.v4.content.res.ResourcesCompat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,6 +11,8 @@ import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.example.myfriends.R;
 import com.example.myfriends.friendsList.FriendsListHolder;
 import com.example.myfriends.friendsList.FriendsListItemVO;
@@ -21,6 +24,7 @@ public class InviteListAdapter extends BaseAdapter {
     private int layout;
     private ArrayList<InviteListVO> inviteListData;
     private LayoutInflater inflater;
+    String url="http://192.168.35.42:8006/files";
     public InviteListAdapter(Context context,int talkList,ArrayList<InviteListVO> list) {
         this.context = context;
         this.layout=talkList;
@@ -58,6 +62,8 @@ public class InviteListAdapter extends BaseAdapter {
         CheckBox selectChk=inviteListHolder.selectChk;
         final InviteListVO inviteListItemVO=inviteListData.get(position);
         profilImageView.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(), R.drawable.custom_item1,null));
+
+        Glide.with(context).load(url+"/profile/"+inviteListItemVO.getName()+".png").diskCacheStrategy(DiskCacheStrategy.NONE).into(profilImageView);
         txtName.setText(inviteListItemVO.getName());
         inviteListItemVO.setSelectChk(selectChk);
         selectChk.setChecked(false);

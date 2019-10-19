@@ -8,25 +8,22 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.SearchView;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.example.myfriends.managerPackage.AppLifeManager;
 import com.example.myfriends.MainActivity;
+import com.example.myfriends.managerPackage.NetworkManager;
 import com.example.myfriends.R;
 import com.example.myfriends.chat.ChatActivity;
 import com.example.myfriends.friendsList.FriendsListItemVO;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class InviteActivity extends AppCompatActivity {
     private ListView listView;
@@ -116,18 +113,13 @@ public class InviteActivity extends AppCompatActivity {
             //채팅방생성, 체크된 유저들 초대, 채팅방으로 이동
             ArrayList<String> nicNames=new ArrayList<>();
             groupKey=userEmail+"/"+Long.toString(System.currentTimeMillis());
-
-            Intent intent =new Intent("com.example.CHAT_ROOM_CREATE_REQUEST_ACTION");
+            nicNames.add(nicName);
             for(int i=0;i<datas.size();i++){
                 if(datas.get(i).getSelectChk().isChecked()){
                     nicNames.add(datas.get(i).getName());
                 }
             }
-            intent.putExtra("userEmail",userEmail);
-            intent.putStringArrayListExtra("nicNames",nicNames);
-            intent.putExtra("groupKey",groupKey);
-            sendBroadcast(intent);
-
+            NetworkManager.getInstance().chatRoomCreate(userEmail,nicNames,groupKey);
         }
         return super.onContextItemSelected(menuItem);
     }
@@ -138,16 +130,40 @@ public class InviteActivity extends AppCompatActivity {
             Intent mainIntent=new Intent(getApplicationContext(), ChatActivity.class);
             mainIntent.putExtra("userEmail",userEmail);
             mainIntent.putExtra("nicName",nicName);
-            mainIntent.putExtra("groupKey",groupKey);
+            mainIntent.putExtra("chatRoomID",groupKey);
             startActivity(mainIntent);
         }
     };
-
+    @Override
+    public void onStart(){
+        super.onStart();
+        AppLifeManager.getInstance().onActivityStarted(this);
+    }
+    @Override
+    public void onStop(){
+        super.onStop();
+        AppLifeManager.getInstance().onActivityStopped(this);
+    }
+    @Override
+    public void onPause() {
+        super.onPause();
+        new AppLifeManager().onActivityPaused(this);
+    }
+    @Override
+    public void onResume(){
+        super.onResume();
+        new AppLifeManager().onActivityResumed(this);
+    }
 
     @Override
     public void onDestroy(){
         super.onDestroy();
         unregisterReceiver(chatRoomCreated);
+        listView=null;
+        datas=null;
+        inviteListAdapter=null;
+        friendsListItemVOS=null;
+        System.gc();
     }
 
     @Override

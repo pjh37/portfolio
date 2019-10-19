@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    tools:context=".friendsList.profile_image_Activity">
+    <android.support.constraint.Guideline
+        android:id="@+id/top_gd"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.3"
+        />
+    <ImageView
+        android:id="@+id/original_image"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="#ffffff"
+        app:layout_constraintTop_toTopOf="@+id/top_gd"
+        app:layout_constraintBottom_toBottomOf="@+id/bottom_gd"
+        android:src="@drawable/custom_item"
+        />
+    <android.support.constraint.Guideline
+        android:id="@+id/bottom_gd"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.7"
+        />
+</android.support.constraint.ConstraintLayout>

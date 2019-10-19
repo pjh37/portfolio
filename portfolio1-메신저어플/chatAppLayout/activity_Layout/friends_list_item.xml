@@ -2,12 +2,13 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="12dp">
+    android:padding="6dp">
 
     <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/img"
         android:layout_width="40dp"
         android:layout_height="40dp"
+        android:layout_marginTop="1dp"
         android:src="@drawable/custom_item"/>
     <TextView
         android:id="@+id/name"
@@ -15,30 +16,16 @@
         android:layout_height="wrap_content"
         android:layout_marginLeft="6dp"
         android:text="익명"
-        android:textSize="20dp"
+        android:textSize="15sp"
+        android:textColor="#070707"
         android:layout_toRightOf="@id/img"/>
     <TextView
-        android:id="@+id/peopleCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="6dp"
-        android:text="0"
-        android:textSize="20dp"
-        android:layout_toRightOf="@id/name"/>
-    <TextView
-        android:id="@+id/lastReceivedMessage"
+        android:id="@+id/stateMessage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
+        android:textSize="13sp"
         android:layout_below="@id/name"
         android:layout_alignLeft="@id/name"
         android:text="content"/>
-    <TextView
-        android:id="@+id/date"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
-        android:text="0월0일"
-        android:textSize="14dp"
-        android:layout_alignBaseline="@id/lastReceivedMessage"/>
 </RelativeLayout>

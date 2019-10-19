@@ -9,9 +9,6 @@ import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
-import android.database.DataSetObserver;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -19,24 +16,17 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.support.v7.widget.SearchView;
 import android.view.View;
-import io.socket.client.Socket;
-import io.socket.client.IO;
-import io.socket.emitter.Emitter;
-import org.json.JSONException;
-import org.json.JSONObject;
-import android.os.Handler;
-import android.os.Looper;
 
-import com.example.myfriends.chat.ChatVO;
-import com.example.myfriends.chatRoomList.ChatRoomListAdapter;
 import com.example.myfriends.chatRoomList.ChatRoomListFragment;
 import com.example.myfriends.chatRoomList.ChatRoomListItemVO;
 import com.example.myfriends.friendsList.FriendsListFragment;
 import com.example.myfriends.friendsList.FriendsListItemVO;
+import com.example.myfriends.friendsList.FriendsPlusActivity;
 import com.example.myfriends.inviteList.InviteActivity;
-import com.example.myfriends.inviteList.InviteListVO;
+import com.example.myfriends.managerPackage.AppLifeManager;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
@@ -47,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     ChatRoomListFragment chatRoomListFragment;
     public ArrayList<FriendsListItemVO> friendsListData;
     public ArrayList<ChatRoomListItemVO> chatRoomListData;
+    public HashMap<String,Integer> chatRoomListHash;
     public boolean friendsBtn=true;
     public boolean chatBtn=false;
     public boolean optionBtn=false;
@@ -61,19 +52,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         getSupportActionBar().setTitle("친구목록");
         registerReceiver(chatRoomListUpdate,new IntentFilter("com.example.CHAT_ROOM_LIST_UPDATE_ACTION"));
-        /*
-        registerReceiver(friendsList,new IntentFilter("com.example.FRIENDS_LIST_RECEIVE_ACTION"));
-        registerReceiver(chatRoomList,new IntentFilter("com.example.MAIN_ACTIVITY_CHAT_ROOM_LIST_ACTION"));
-        Intent intent =new Intent("com.example.FRIENDS_LIST_ACTION");
-        sendBroadcast(intent);
-        */
+        registerReceiver(receiver,new IntentFilter("com.example.RECEIVE_ACTION"));
+        registerReceiver(friendsListUpdate,new IntentFilter("com.example.FRIENDS_LIST_UPDATE"));
+
         Intent intent=getIntent();
         friendsListData=intent.getParcelableArrayListExtra("friendsListData");
         chatRoomListData=intent.getParcelableArrayListExtra("chatRoomListData");
+        chatRoomListHash=(HashMap<String, Integer>) intent.getSerializableExtra("chatRooms");
         userEmail=intent.getStringExtra("userEmail");
         nicName=intent.getStringExtra("nicName");
         friendsListFragment=new FriendsListFragment();
         chatRoomListFragment=new ChatRoomListFragment();
+
+
         setFragment(0);
 
         bottomNavigationItemView=(BottomNavigationView)findViewById(R.id.bottomNavigation);
@@ -148,7 +139,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public boolean onOptionsItemSelected(MenuItem menuItem){
         if(menuItem.getItemId()==R.id.friendsPlusOption){
-
+            Intent intent =new Intent(this, FriendsPlusActivity.class);
+            intent.putExtra("userEmail",userEmail);
+            intent.putExtra("myNicName",nicName);
+            startActivity(intent);
         }else if(menuItem.getItemId()==R.id.inviteOption){
             Intent intent=new Intent(this,InviteActivity.class);
             intent.putExtra("userEmail",userEmail);
@@ -185,6 +179,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 getSupportActionBar().setTitle("친구목록");
                 bundle=new Bundle();
                 bundle.putParcelableArrayList("data",friendsListData);
+                bundle.putString("nicName",nicName);
+                bundle.putString("userEmail",userEmail);
                 friendsListFragment.setArguments(bundle);
                 ft.replace(R.id.main_frame,friendsListFragment);
                 ft.commit();
@@ -193,40 +189,50 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 getSupportActionBar().setTitle("채팅");
                 bundle=new Bundle();
                 bundle.putString("nicName",nicName);
+                bundle.putString("userEmail",userEmail);
                 bundle.putParcelableArrayList("data",chatRoomListData);
                 chatRoomListFragment.setArguments(bundle);
+
                 ft.replace(R.id.main_frame,chatRoomListFragment);
                 ft.commit();
 
                 break;
         }
     }
-
-    /*
-    BroadcastReceiver friendsList=new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            data=intent.getParcelableArrayListExtra("data");
-            //setFragment(0);
-            Log.v("argumentCount",data.get(0).getStateMessage());
-        }
-    };
-    BroadcastReceiver chatRoomList=new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-
-        }
-    };
-    */
     BroadcastReceiver chatRoomListUpdate=new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             ChatRoomListItemVO chatRoomListItemVO=new ChatRoomListItemVO();
             chatRoomListItemVO.setChatRoomId(intent.getStringExtra("groupKey"));
+            chatRoomListItemVO.setNames(intent.getStringArrayListExtra("nicNames"));
+            chatRoomListItemVO.setPeopleCount(intent.getStringArrayListExtra("nicNames").size()+"");
             chatRoomListData.add(chatRoomListItemVO);
+            chatRoomListFragment.chatRoomListRefresh();
             Log.v("chatRoomListUpdate","채팅룸 추가");
         }
     };
+    BroadcastReceiver receiver=new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int type=intent.getIntExtra("type",1);
+            String chatRoomID=intent.getStringExtra("chatRoomID");
+            String nicName=intent.getStringExtra("nicName");
+            String content=intent.getStringExtra("content");
+            chatRoomListFragment.getDatas().get(chatRoomListHash.get(chatRoomID)).setLastReceivedMessage(content);
+            //Toast.makeText(getApplicationContext(),content,Toast.LENGTH_LONG).show();
+            chatRoomListFragment.chatRoomListRefresh();
+        }
+    };
+    BroadcastReceiver friendsListUpdate=new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            FriendsListItemVO friendsListItemVO=new FriendsListItemVO();
+            friendsListItemVO.setName(intent.getStringExtra("nicName"));
+            friendsListFragment.getDatas().add(friendsListItemVO);
+            friendsListFragment.friendsListRefresh();
+        }
+    };
+
     @Override
     protected void onActivityResult(int requestCode,int resultCode,Intent data){
         if(requestCode==RESULT_OK){
@@ -234,9 +240,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
     @Override
+    public void onStart(){
+        super.onStart();
+        AppLifeManager.getInstance().onActivityStarted(this);
+    }
+    @Override
+    public void onStop(){
+        super.onStop();
+        AppLifeManager.getInstance().onActivityStopped(this);
+    }
+    @Override
+    public void onPause() {
+        super.onPause();
+    }
+    @Override
+    public void onResume(){
+        super.onResume();
+    }
+    @Override
     public void onDestroy(){
         super.onDestroy();
+        manager=null;
+        friendsListFragment=null;
+        chatRoomListFragment=null;
+        friendsListData=null;
+        chatRoomListData=null;
+        chatRoomListHash=null;
         unregisterReceiver(chatRoomListUpdate);
-        //unregisterReceiver(chatRoomList);
+        unregisterReceiver(receiver);
+        unregisterReceiver(friendsListUpdate);
+        System.gc();
     }
 }

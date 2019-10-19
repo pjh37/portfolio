@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <itme
+        android:id="@+id/editOption"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="편집"
+        />
+    <itme
+        android:id="@+id/friendsMangeOption"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="정렬"
+        />
+    <itme
+        android:id="@+id/totalSettingOption"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="전체설정"
+        />
+    <item
+        android:id="@+id/searchViewMenu"
+        app:actionViewClass="android.support.v7.widget.SearchView"
+        android:icon="@android:drawable/ic_menu_search"
+        app:showAsAction="always"
+        android:title="search"
+        />
+    <item
+        android:id="@+id/inviteOption"
+        android:title="friendsPlus"
+        android:icon="@drawable/ic_chat_black_24dp"
+        app:showAsAction="always"
+        />
+</menu>

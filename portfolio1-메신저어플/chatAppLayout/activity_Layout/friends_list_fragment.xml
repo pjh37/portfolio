@@ -6,31 +6,32 @@
     android:orientation="vertical"
     android:id="@+id/friendsListFragment">
     <RelativeLayout
+        android:id="@+id/myProfile"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="12dp">
 
         <de.hdodenhof.circleimageview.CircleImageView
-            android:id="@+id/img"
+            android:id="@+id/myProfileImage"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/custom_item1"/>
         <TextView
-            android:id="@+id/name"
+            android:id="@+id/myName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="6dp"
             android:text="익명"
             android:textSize="20dp"
-            android:layout_toRightOf="@id/img"/>
+            android:layout_toRightOf="@id/myProfileImage"/>
         <TextView
-            android:id="@+id/stateMessage"
+            android:id="@+id/myStateMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:layout_below="@id/name"
-            android:layout_alignLeft="@id/name"
-            android:text="content"/>
+            android:layout_below="@id/myName"
+            android:layout_alignLeft="@id/myName"
+            android:text=""/>
     </RelativeLayout>
     <RelativeLayout
         android:layout_width="match_parent"
@@ -44,6 +45,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:id="@+id/friendsCount"
             android:layout_toRightOf="@+id/subTitle"
             android:layout_marginLeft="6dp"
             android:text="0"/>

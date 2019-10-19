@@ -10,6 +10,8 @@ public class ChatVO {
     private String content;
     private String date;
     private String senderDate;
+    private String fileUrl;
+    private int fileType;
     private View leftView;
     private View rightView;
 
@@ -75,5 +77,21 @@ public class ChatVO {
 
     public void setDate(String date) {
         this.date = date;
+    }
+
+    public String getFileUrl() {
+        return fileUrl;
+    }
+
+    public void setFileUrl(String fileUrl) {
+        this.fileUrl = fileUrl;
+    }
+
+    public int getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(int fileType) {
+        this.fileType = fileType;
     }
 }
